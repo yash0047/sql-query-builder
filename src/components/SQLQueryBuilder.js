@@ -48,11 +48,16 @@ const SQLQueryBuilder = () => {
   };
 
   const handleTableChange = (index, selectedOption) => {
+
     const tableName = selectedOption ? selectedOption.value : "";
     const updatedTables = selectedTables.map((table, i) =>
       i === index ? { ...table, table: tableName, columns: [] } : table
     );
     setSelectedTables(updatedTables);
+    setJoins([{ table1: "", column1: "", table2: "", column2: "", type: "INNER" }]);
+    setWhereConditions([{ column1: "", operator: "=", column2: "" }]);
+    setGroupBy("");
+    setOrderBy({ column: "", direction: "ASC" });  
   };
 
   const handleColumnChange = (index, selectedOptions) => {
