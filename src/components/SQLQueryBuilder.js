@@ -68,30 +68,20 @@ const SQLQueryBuilder = () => {
     setSelectedTables(updatedTables);
   };
 
-  const handleColumnRemoval = (tableIndex, column) => {
-    const updatedTables = selectedTables.map((table, i) => {
-      if (i === tableIndex) {
-        return {
-          ...table,
-          columns: table.columns.filter((c) => c !== column),
-        };
-      }
-      return table;
-    });
-    setSelectedTables(updatedTables);
-  };
-
   const getCombinedOptions = () => {
     const selectedTableNames = selectedTables.map((table) => table.table);
-
     return tables
       .filter((table) => selectedTableNames.includes(table.name))
-      .flatMap((table) =>
-        table.columns.map((column) => ({
-          value: `${table.name}.${column}`,
-          label: `${table.name}.${column}`,
-        }))
-      );
+      .flatMap((table) => {
+        const selectedColumns =
+          selectedTables.find((t) => t.table === table.name)?.columns || [];
+        return table.columns
+          .filter((column) => selectedColumns.includes(column))
+          .map((column) => ({
+            value: `${table.name}.${column}`,
+            label: `${table.name}.${column}`,
+          }));
+      });
   };
 
   const handleJoinChange = (index, field, value) => {
@@ -107,20 +97,22 @@ const SQLQueryBuilder = () => {
     setJoins(updatedJoins);
   };
 
-  // const handleWhereConditionChange = (index, field, value) => {
-  //   const updatedConditions = whereConditions.map((condition, i) =>
-  //     i === index ? { ...condition, [field]: value } : condition
-  //   );
-  //   setWhereConditions(updatedConditions);
-  // };
-
   const handleWhereConditionChange = (index, field, value) => {
+    let validValue = value;
+    if (field === "column2") {
+      const numericValue = parseInt(value);
+      if (!isNaN(numericValue) && numericValue < 0) {
+        validValue = "";
+      }
+    }
     const updatedConditions = whereConditions.map((condition, i) => {
       if (i === index) {
-        const newCondition = { ...condition, [field]: value };
-        // Clear column2 if the operator is 'IS NULL' or 'IS NOT NULL'
-        if (field === 'operator' && (value === 'IS NULL' || value === 'IS NOT NULL')) {
-          newCondition.column2 = '';  // Clear column2 for these operators
+        const newCondition = { ...condition, [field]: validValue };
+        if (
+          field === "operator" &&
+          (value === "IS NULL" || value === "IS NOT NULL")
+        ) {
+          newCondition.column2 = "";
         }
         return newCondition;
       }
@@ -128,7 +120,6 @@ const SQLQueryBuilder = () => {
     });
     setWhereConditions(updatedConditions);
   };
-  
 
   const generateSQLQuery = () => {
     let query = "SELECT ";
@@ -523,21 +514,36 @@ const SQLQueryBuilder = () => {
         <div className="col-6">
           <h5 style={{ textAlign: "left" }}>Limit</h5>
           <input
+            min="1"
             type="number"
             className="form-control mb-2"
             placeholder="Limit"
             value={limit}
-            onChange={(e) => setLimit(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === "" || parseInt(value) > 0) {
+                setLimit(value);
+              }
+            }}
           />
         </div>
         <div className="col-6">
           <h5 style={{ textAlign: "left" }}>Offset</h5>
           <input
+            min="1"
             type="number"
             className="form-control mb-2"
             placeholder="Offset"
             value={offset}
-            onChange={(e) => setOffset(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (
+                value === "" ||
+                (parseInt(value) >= 0 && parseInt(value) <= parseInt(limit))
+              ) {
+                setOffset(value);
+              }
+            }}
           />
         </div>
       </div>
