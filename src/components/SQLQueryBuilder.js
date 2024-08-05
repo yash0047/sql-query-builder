@@ -198,7 +198,7 @@ const SQLQueryBuilder = () => {
     // Where conditions
     if (whereConditions.length > 0 && whereConditions[0].column1 != "") {
       const whereClauses = whereConditions.map((condition) => {
-        if(condition.column2 == '' && !condition.operator.includes("NULL"))
+        if(condition.column1 != '' && condition.column2 == '' && !condition.operator.includes("NULL"))
         {
           return toast.error("Enter Value Of Where Condition!");
         }
