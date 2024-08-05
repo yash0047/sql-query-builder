@@ -192,12 +192,16 @@ const SQLQueryBuilder = () => {
       }
     });
 
-    if (whereConditions.length > 0 && whereConditions[0].column1 != "" && whereConditions[0].column2 == "") {
+    if (whereConditions.length > 0 && whereConditions[0].column1 != "" && whereConditions[0].column2 == "" && !whereConditions[0].operator.includes("NULL")) {
       return toast.error("Enter Value Of Where Condition!");
     }
     // Where conditions
     if (whereConditions.length > 0 && whereConditions[0].column1 != "") {
       const whereClauses = whereConditions.map((condition) => {
+        if(condition.column2 == '' && !condition.operator.includes("NULL"))
+        {
+          return toast.error("Enter Value Of Where Condition!");
+        }
         if (condition.operator.includes("NULL")) {
           return `${condition.column1} ${condition.operator}`;
         }
