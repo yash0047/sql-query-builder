@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import Select from "react-select";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const SQLQueryBuilder = () => {
   const tables = [
@@ -15,6 +17,13 @@ const SQLQueryBuilder = () => {
     },
   ];
 
+  const relationships = {
+    Categories: ["Products"],
+    Products: ["Orders"],
+    Orders: [],
+  };
+
+  const [query, setQuery] = useState("");
   const [selectedTables, setSelectedTables] = useState([
     { table: "", columns: [] },
   ]);
@@ -48,16 +57,17 @@ const SQLQueryBuilder = () => {
   };
 
   const handleTableChange = (index, selectedOption) => {
-
     const tableName = selectedOption ? selectedOption.value : "";
     const updatedTables = selectedTables.map((table, i) =>
       i === index ? { ...table, table: tableName, columns: [] } : table
     );
     setSelectedTables(updatedTables);
-    setJoins([{ table1: "", column1: "", table2: "", column2: "", type: "INNER" }]);
+    setJoins([
+      { table1: "", column1: "", table2: "", column2: "", type: "INNER" },
+    ]);
     setWhereConditions([{ column1: "", operator: "=", column2: "" }]);
     setGroupBy("");
-    setOrderBy({ column: "", direction: "ASC" });  
+    setOrderBy({ column: "", direction: "ASC" });
   };
 
   const handleColumnChange = (index, selectedOptions) => {
@@ -75,18 +85,29 @@ const SQLQueryBuilder = () => {
 
   const getCombinedOptions = () => {
     const selectedTableNames = selectedTables.map((table) => table.table);
-    return tables
-      .filter((table) => selectedTableNames.includes(table.name))
-      .flatMap((table) => {
-        const selectedColumns =
-          selectedTables.find((t) => t.table === table.name)?.columns || [];
-        return table.columns
-          .filter((column) => selectedColumns.includes(column))
-          .map((column) => ({
-            value: `${table.name}.${column}`,
-            label: `${table.name}.${column}`,
-          }));
+    const relatedColumnOptionsSet = new Set();
+    selectedTableNames.forEach((tableName) => {
+      const relatedTables = relationships[tableName] || [];
+      relatedTables.forEach((relatedTableName) => {
+        if (selectedTableNames.includes(relatedTableName)) {
+          const table = tables.find((t) => t.name === tableName);
+          const relatedTable = tables.find((t) => t.name === relatedTableName);
+          if (table && relatedTable) {
+            table.columns.forEach((column) => {
+              if (relatedTable.columns.includes(column)) {
+                relatedColumnOptionsSet.add(`${tableName}.${column}`);
+                relatedColumnOptionsSet.add(`${relatedTableName}.${column}`);
+              }
+            });
+          }
+        }
       });
+    });
+
+    return Array.from(relatedColumnOptionsSet).map((option) => ({
+      value: option,
+      label: option,
+    }));
   };
 
   const handleJoinChange = (index, field, value) => {
@@ -127,6 +148,20 @@ const SQLQueryBuilder = () => {
   };
 
   const generateSQLQuery = () => {
+    if (selectedTables[0]?.table == "") {
+      return toast.error("Select at least one table!");
+    }
+    if (selectedTables[1]?.table == "") {
+      return toast.error("Select Second table!");
+    }
+
+    if (
+      selectedTables.length > 1 &&
+      (joins.length === 0 || (joins.length === 1 && joins[0].column1 === ""))
+    ) {
+      return toast.error("Joins are required when selecting multiple tables!");
+    }
+
     let query = "SELECT ";
 
     // Select columns
@@ -157,6 +192,9 @@ const SQLQueryBuilder = () => {
       }
     });
 
+    if (whereConditions.length > 0 && whereConditions[0].column1 != "" && whereConditions[0].column2 == "") {
+      return toast.error("Enter Value Of Where Condition!");
+    }
     // Where conditions
     if (whereConditions.length > 0 && whereConditions[0].column1 != "") {
       const whereClauses = whereConditions.map((condition) => {
@@ -186,16 +224,25 @@ const SQLQueryBuilder = () => {
       query += ` OFFSET ${offset}`;
     }
 
-    return query;
+    if (selectedTables.length === 1 && fromTables) {
+      setQuery(query);
+    } else if (
+      selectedTables.length > 1 &&
+      (joins.length === 0 || (joins.length === 1 && joins[0].column1 !== ""))
+    ) {
+      setQuery(query);
+    } else {
+      setQuery(""); // Clear the query if conditions are not met
+    }
   };
 
   const getAllPossibleColumns = () => {
+    const selectedTableNames = selectedTables.map(
+      (selectedTable) => selectedTable.table
+    );
+
     const allColumns = tables
-      .filter((table) =>
-        selectedTables.some(
-          (selectedTable) => selectedTable.table === table.name
-        )
-      )
+      .filter((table) => selectedTableNames.includes(table.name))
       .flatMap((table) =>
         table.columns.map((column) => ({
           value: `${table.name}.${column}`,
@@ -208,6 +255,41 @@ const SQLQueryBuilder = () => {
 
   const getTableOptions = () => {
     const selectedTableNames = selectedTables.map((table) => table.table);
+    const maxRowsAllowed =
+      Object.values(relationships).reduce(
+        (max, rels) => Math.max(max, rels.length),
+        0
+      ) + 1;
+    const isFirstTableProducts = selectedTableNames[0] === 'Orders';
+    if (isFirstTableProducts) {
+      if (selectedTableNames.length >= maxRowsAllowed) {
+        return [];
+      }
+    } else {
+      if (selectedTableNames.length >= maxRowsAllowed + 1) {
+        return [];
+      }
+    }
+
+    if (selectedTableNames.length === 1) {
+      return tables.map((table) => ({ value: table.name, label: table.name }));
+    }
+
+    const relatedTables = selectedTableNames.flatMap(
+      (name) => relationships[name] || []
+    );
+
+    const availableOptions = tables
+      .filter(
+        (table) =>
+          !selectedTableNames.includes(table.name) &&
+          relatedTables.includes(table.name)
+      )
+      .map((table) => ({ value: table.name, label: table.name }));
+
+    if (availableOptions.length > 0) {
+      return availableOptions;
+    }
 
     return tables
       .filter((table) => !selectedTableNames.includes(table.name))
@@ -555,17 +637,24 @@ const SQLQueryBuilder = () => {
 
       {/* Generate SQL Query Button */}
       <button
-        className="btn btn-success mt-3"
-        onClick={() => alert(generateSQLQuery())}
+        className="btn btn-success mt-3 mb-3"
+        onClick={() => generateSQLQuery()}
       >
         Generate SQL Query
       </button>
+      <ToastContainer />
+      {query && (
+        <div>
+          <h3>Generated SQL Query:</h3>
+          <pre>{query}</pre>
+        </div>
+      )}
 
       {/* Output */}
-      <h5 style={{ textAlign: "left" }}>Generated SQL Query</h5>
+      {/* <h5 style={{ textAlign: "left" }}>Generated SQL Query</h5>
       <div>
         <pre>{generateSQLQuery()}</pre>
-      </div>
+      </div> */}
     </div>
   );
 };
