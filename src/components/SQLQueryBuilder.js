@@ -259,22 +259,14 @@ const SQLQueryBuilder = () => {
 
   const getTableOptions = () => {
     const selectedTableNames = selectedTables.map((table) => table.table);
-    const maxRowsAllowed =
-      Object.values(relationships).reduce(
-        (max, rels) => Math.max(max, rels.length),
-        0
-      ) + 1;
-    const isFirstTableProducts = selectedTableNames[0] === 'Orders';
-    if (isFirstTableProducts) {
-      if (selectedTableNames.length >= maxRowsAllowed) {
+    const firstSelectedTable = selectedTableNames[0];
+    if (relationships.hasOwnProperty(firstSelectedTable) && firstSelectedTable) {
+      const relatedTablesLength = relationships[firstSelectedTable].length;
+      if(selectedTableNames.length > relatedTablesLength + 1)
+      {
         return [];
       }
-    } else {
-      if (selectedTableNames.length >= maxRowsAllowed + 1) {
-        return [];
-      }
-    }
-
+    }  
     if (selectedTableNames.length === 1) {
       return tables.map((table) => ({ value: table.name, label: table.name }));
     }
