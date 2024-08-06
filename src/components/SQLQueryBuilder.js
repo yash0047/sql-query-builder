@@ -348,6 +348,7 @@ const SQLQueryBuilder = () => {
                       handleTableChange(index, selectedOption)
                     }
                     placeholder="Select Table"
+                    isDisabled={table.table !== ''}
                   />
                 </div>
                 <div className="col-6">
