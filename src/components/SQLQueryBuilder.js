@@ -207,6 +207,12 @@ const SQLQueryBuilder = () => {
 
     // Joins
     joins.forEach((join) => {
+      if((join.table1 == '' &&
+        join.column1 == '') || (join.table2 == '' &&
+          join.column2 == ''))
+      {
+        return toast.error("Enter Value Of Join Conditions!");
+      }
       if (
         join.table1 &&
         join.column1 &&
@@ -230,8 +236,8 @@ const SQLQueryBuilder = () => {
     if (whereConditions.length > 0 && whereConditions[0].column1 != "") {
       const whereClauses = whereConditions.map((condition) => {
         if (
-          condition.column1 != "" &&
-          condition.column2 == "" &&
+          (condition.column1 == "" ||
+          condition.column2 == "") &&
           !condition.operator.includes("NULL")
         ) {
           return toast.error("Enter Value Of Where Condition!");
