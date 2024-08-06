@@ -147,6 +147,21 @@ const SQLQueryBuilder = () => {
     setWhereConditions(updatedConditions);
   };
 
+  const reset = () => {
+    setQuery("");
+    setSelectedTables([
+      { table: "", columns: [] },
+    ]);
+    setJoins([
+      { table1: "", column1: "", table2: "", column2: "", type: "INNER" }
+    ]);
+    setWhereConditions([{ column1: "", operator: "=", column2: "" }]);
+    setGroupBy("");
+    setOrderBy({ column: "", direction: "ASC" });
+    setLimit("");
+    setOffset("");
+  }
+
   const generateSQLQuery = () => {
     if (selectedTables[0]?.table == "") {
       return toast.error("Select at least one table!");
@@ -207,7 +222,14 @@ const SQLQueryBuilder = () => {
         }
         return `${condition.column1} ${condition.operator} ${condition.column2}`;
       });
-      query += ` WHERE ${whereClauses.join(" AND ")}`;
+      if(whereConditions.length == 1 && whereConditions[0].column1 != "")
+      {
+        query += ` WHERE ${whereClauses}`;
+      }
+      else if(whereConditions.length >= 2 && whereConditions[1].column1 != "")
+      {
+        query += ` WHERE ${whereClauses.join(" AND ")}`;
+      }
     }
 
     // Group by
@@ -633,10 +655,16 @@ const SQLQueryBuilder = () => {
 
       {/* Generate SQL Query Button */}
       <button
-        className="btn btn-success mt-3 mb-3"
+        className="btn btn-success mt-3 mb-3 me-3"
         onClick={() => generateSQLQuery()}
       >
         Generate SQL Query
+      </button>
+      <button
+        className="btn btn-danger mt-3 mb-3"
+        onClick={() => reset()}
+      >
+        Reset
       </button>
       <ToastContainer />
       {query && (
@@ -645,12 +673,6 @@ const SQLQueryBuilder = () => {
           <pre>{query}</pre>
         </div>
       )}
-
-      {/* Output */}
-      {/* <h5 style={{ textAlign: "left" }}>Generated SQL Query</h5>
-      <div>
-        <pre>{generateSQLQuery()}</pre>
-      </div> */}
     </div>
   );
 };
