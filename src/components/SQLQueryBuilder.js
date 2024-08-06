@@ -56,6 +56,19 @@ const SQLQueryBuilder = () => {
     ]);
   };
 
+  const handleColumnRemoval = (tableIndex, column) => {
+    const updatedTables = selectedTables.map((table, i) => {
+      if (i === tableIndex) {
+        return {
+          ...table,
+          columns: table.columns.filter((c) => c !== column),
+        };
+      }
+      return table;
+    });
+    setSelectedTables(updatedTables);
+  };
+
   const handleTableChange = (index, selectedOption) => {
     const tableName = selectedOption ? selectedOption.value : "";
     const updatedTables = selectedTables.map((table, i) =>
@@ -149,18 +162,16 @@ const SQLQueryBuilder = () => {
 
   const reset = () => {
     setQuery("");
-    setSelectedTables([
-      { table: "", columns: [] },
-    ]);
+    setSelectedTables([{ table: "", columns: [] }]);
     setJoins([
-      { table1: "", column1: "", table2: "", column2: "", type: "INNER" }
+      { table1: "", column1: "", table2: "", column2: "", type: "INNER" },
     ]);
     setWhereConditions([{ column1: "", operator: "=", column2: "" }]);
     setGroupBy("");
     setOrderBy({ column: "", direction: "ASC" });
     setLimit("");
     setOffset("");
-  }
+  };
 
   const generateSQLQuery = () => {
     if (selectedTables[0]?.table == "") {
@@ -207,14 +218,22 @@ const SQLQueryBuilder = () => {
       }
     });
 
-    if (whereConditions.length > 0 && whereConditions[0].column1 != "" && whereConditions[0].column2 == "" && !whereConditions[0].operator.includes("NULL")) {
+    if (
+      whereConditions.length > 0 &&
+      whereConditions[0].column1 != "" &&
+      whereConditions[0].column2 == "" &&
+      !whereConditions[0].operator.includes("NULL")
+    ) {
       return toast.error("Enter Value Of Where Condition!");
     }
     // Where conditions
     if (whereConditions.length > 0 && whereConditions[0].column1 != "") {
       const whereClauses = whereConditions.map((condition) => {
-        if(condition.column1 != '' && condition.column2 == '' && !condition.operator.includes("NULL"))
-        {
+        if (
+          condition.column1 != "" &&
+          condition.column2 == "" &&
+          !condition.operator.includes("NULL")
+        ) {
           return toast.error("Enter Value Of Where Condition!");
         }
         if (condition.operator.includes("NULL")) {
@@ -222,12 +241,12 @@ const SQLQueryBuilder = () => {
         }
         return `${condition.column1} ${condition.operator} ${condition.column2}`;
       });
-      if(whereConditions.length == 1 && whereConditions[0].column1 != "")
-      {
+      if (whereConditions.length == 1 && whereConditions[0].column1 != "") {
         query += ` WHERE ${whereClauses}`;
-      }
-      else if(whereConditions.length >= 2 && whereConditions[1].column1 != "")
-      {
+      } else if (
+        whereConditions.length >= 2 &&
+        whereConditions[1].column1 != ""
+      ) {
         query += ` WHERE ${whereClauses.join(" AND ")}`;
       }
     }
@@ -254,7 +273,7 @@ const SQLQueryBuilder = () => {
       setQuery(query);
     } else if (
       selectedTables.length > 1 &&
-      (joins.length === 0 || (joins.length === 1 && joins[0].column1 !== ""))
+      (joins.length >= 0 || (joins.length === 1 && joins[0].column1 !== ""))
     ) {
       setQuery(query);
     } else {
@@ -282,13 +301,15 @@ const SQLQueryBuilder = () => {
   const getTableOptions = () => {
     const selectedTableNames = selectedTables.map((table) => table.table);
     const firstSelectedTable = selectedTableNames[0];
-    if (relationships.hasOwnProperty(firstSelectedTable) && firstSelectedTable) {
+    if (
+      relationships.hasOwnProperty(firstSelectedTable) &&
+      firstSelectedTable
+    ) {
       const relatedTablesLength = relationships[firstSelectedTable].length;
-      if(selectedTableNames.length > relatedTablesLength + 1)
-      {
+      if (selectedTableNames.length > relatedTablesLength + 1) {
         return [];
       }
-    }  
+    }
     if (selectedTableNames.length === 1) {
       return tables.map((table) => ({ value: table.name, label: table.name }));
     }
@@ -348,10 +369,10 @@ const SQLQueryBuilder = () => {
                       handleTableChange(index, selectedOption)
                     }
                     placeholder="Select Table"
-                    isDisabled={table.table !== ''}
+                    isDisabled={table.table !== ""}
                   />
                 </div>
-                <div className="col-6">
+                <div className="col-5">
                   <Select
                     isMulti
                     options={getColumnOptions(table.table)}
@@ -364,6 +385,21 @@ const SQLQueryBuilder = () => {
                     }
                     placeholder="Select Columns"
                   />
+                </div>
+                <div className="col-1">
+                  {index > 0 && (
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm"
+                      onClick={() =>
+                        setSelectedTables(
+                          selectedTables.filter((_, i) => i !== index)
+                        )
+                      }
+                    >
+                      <i class="fa fa-times" aria-hidden="true"></i>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -407,7 +443,7 @@ const SQLQueryBuilder = () => {
                         placeholder="Select Table1.Column1"
                       />
                     </div>
-                    <div className="col-4">
+                    <div className="col-3">
                       <Select
                         options={[
                           { value: "INNER", label: "INNER JOIN" },
@@ -458,6 +494,21 @@ const SQLQueryBuilder = () => {
                         placeholder="Select Table2.Column2"
                       />
                     </div>
+                    <div className="col-1">
+                  {index > 0 && (
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm"
+                      onClick={() =>
+                        setJoins(
+                          joins.filter((_, i) => i !== index)
+                        )
+                      }
+                    >
+                      <i class="fa fa-times" aria-hidden="true"></i>
+                    </button>
+                  )}
+                </div>
                   </div>
                 </div>
               ))}
@@ -500,7 +551,7 @@ const SQLQueryBuilder = () => {
                     placeholder="Select Column"
                   />
                 </div>
-                <div className="col-4">
+                <div className="col-3">
                   <Select
                     options={[
                       { value: "=", label: "=" },
@@ -548,6 +599,21 @@ const SQLQueryBuilder = () => {
                       condition.operator.includes("IS NOT NULL")
                     }
                   />
+                </div>
+                <div className="col-1">
+                  {index > 0 && (
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm"
+                      onClick={() =>
+                        setWhereConditions(
+                          whereConditions.filter((_, i) => i !== index)
+                        )
+                      }
+                    >
+                      <i class="fa fa-times" aria-hidden="true"></i>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -661,10 +727,7 @@ const SQLQueryBuilder = () => {
       >
         Generate SQL Query
       </button>
-      <button
-        className="btn btn-danger mt-3 mb-3"
-        onClick={() => reset()}
-      >
+      <button className="btn btn-danger mt-3 mb-3" onClick={() => reset()}>
         Reset
       </button>
       <ToastContainer />
